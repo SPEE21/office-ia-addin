@@ -34,6 +34,7 @@ function initApp() {
     hostBadge.textContent = "Mode Word";
     hostBadge.classList.add("word-mode");
     document.getElementById("assistants-word-view").classList.remove("hidden");
+    document.getElementById("word-settings-group").classList.remove("hidden");
   } else if (currentHost === "Excel") {
     hostBadge.textContent = "Mode Excel";
     hostBadge.classList.add("excel-mode");
@@ -67,9 +68,13 @@ function loadSettings() {
   apiKey = localStorage.getItem("mammouth_api_key") || "";
   selectedModel = localStorage.getItem("mammouth_selected_model") || "gpt-4o";
   const theme = localStorage.getItem("mammouth_theme") || "dark";
+  const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
 
   // Appliquer la clé API dans l'input
   document.getElementById("api-key-input").value = apiKey;
+
+  // Appliquer la coche pour le mode révision
+  document.getElementById("track-changes-checkbox").checked = trackChanges;
 
   // Appliquer le thème
   applyTheme(theme);
@@ -250,6 +255,12 @@ function setupEventListeners() {
     document.getElementById("chat-model-indicator").textContent = selectedModel;
   });
 
+  // Modifier l'option mode révision
+  const trackChangesCheckbox = document.getElementById("track-changes-checkbox");
+  trackChangesCheckbox.addEventListener("change", () => {
+    localStorage.setItem("mammouth_track_changes", trackChangesCheckbox.checked);
+  });
+
   // Auto-grow du textarea d'entrée chat
   const chatInput = document.getElementById("chat-input");
   chatInput.addEventListener("input", () => {
@@ -312,7 +323,8 @@ function setupEventListeners() {
   document.getElementById("btn-results-apply").addEventListener("click", async () => {
     const text = resultTextElement.textContent;
     if (currentHost === "Word") {
-      await officeHelpers.insertTextWord(text, "replace");
+      const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
+      await officeHelpers.insertTextWord(text, "replace", trackChanges);
     } else if (currentHost === "Excel") {
       await officeHelpers.writeExcelSelection(text, false);
     }
@@ -322,7 +334,8 @@ function setupEventListeners() {
   document.getElementById("btn-results-insert").addEventListener("click", async () => {
     const text = resultTextElement.textContent;
     if (currentHost === "Word") {
-      await officeHelpers.insertTextWord(text, "after");
+      const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
+      await officeHelpers.insertTextWord(text, "after", trackChanges);
     } else if (currentHost === "Excel") {
       // Pour Excel, insérer après signifie écrire sous la cellule
       alert("Veuillez sélectionner la cellule cible dans Excel pour y insérer la donnée.");
@@ -663,7 +676,8 @@ function addMessageActionButtons(messageDiv, text) {
   insertBtn.innerHTML = '<i data-lucide="plus"></i> Insérer';
   insertBtn.onclick = async () => {
     if (currentHost === "Word") {
-      await officeHelpers.insertTextWord(text, "replace");
+      const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
+      await officeHelpers.insertTextWord(text, "replace", trackChanges);
       insertBtn.innerHTML = '<i data-lucide="check"></i> Inséré !';
     } else if (currentHost === "Excel") {
       await officeHelpers.writeExcelSelection(text, false);

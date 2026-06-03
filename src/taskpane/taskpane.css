@@ -1206,3 +1206,66 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* Styles pour le bouton Switch moderne (Mode Révision) */
+.checkbox-setting-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.switch-container {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.switch-container input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  transition: .3s;
+  border-radius: var(--radius-full);
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .switch-slider {
+  background-color: var(--bg-orange-soft);
+  border-color: var(--accent-orange);
+}
+
+input:checked + .switch-slider:before {
+  transform: translateX(18px);
+  background-color: var(--accent-orange);
+}
+
+.checkbox-label-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}

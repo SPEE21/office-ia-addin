@@ -50,8 +50,9 @@ class OfficeHelpers {
    * Remplace ou insère du texte par rapport à la sélection Word.
    * @param {string} text - Le texte à insérer.
    * @param {'replace' | 'after' | 'before'} location - Emplacement de l'insertion.
+   * @param {boolean} trackChanges - Si vrai, applique les modifications en mode révision (suivi des modifications).
    */
-  async insertTextWord(text, location = "replace") {
+  async insertTextWord(text, location = "replace", trackChanges = false) {
     if (this.getHost() !== "Word") return;
 
     return Word.run(async (context) => {
@@ -71,8 +72,66 @@ class OfficeHelpers {
           break;
       }
 
-      selection.insertText(text, wordLocation);
+      // Sauvegarder la mise en forme de police avant de modifier le texte
+      let fontBackup = {};
+      try {
+        selection.load("font");
+        await context.sync();
+        
+        if (selection.font) {
+          const fontProperties = ["name", "size", "color", "bold", "italic", "underline", "strikeThrough"];
+          fontProperties.forEach(prop => {
+            const val = selection.font[prop];
+            // Si la valeur est bien définie et n'est pas un mélange ("mixed" / null)
+            if (val !== null && val !== undefined && val !== "mixed" && val !== "") {
+              fontBackup[prop] = val;
+            }
+          });
+        }
+      } catch (fontLoadError) {
+        console.warn("[OfficeHelpers] Impossible de charger les styles de police originaux :", fontLoadError);
+      }
+
+      let originalTrackingMode = null;
+      let isTrackingModified = false;
+
+      if (trackChanges && typeof Word.ChangeTrackingMode !== "undefined") {
+        try {
+          context.document.load("changeTrackingMode");
+          await context.sync();
+          originalTrackingMode = context.document.changeTrackingMode;
+          
+          context.document.changeTrackingMode = Word.ChangeTrackingMode.trackAll;
+          await context.sync();
+          isTrackingModified = true;
+        } catch (trackError) {
+          console.warn("[OfficeHelpers] Impossible de configurer le suivi des modifications :", trackError);
+        }
+      }
+
+      const insertedRange = selection.insertText(text, wordLocation);
+
+      // Réappliquer le formatage sauvegardé sur le nouveau range
+      if (insertedRange && insertedRange.font) {
+        Object.keys(fontBackup).forEach(prop => {
+          try {
+            insertedRange.font[prop] = fontBackup[prop];
+          } catch (applyError) {
+            console.warn(`[OfficeHelpers] Impossible de réappliquer la propriété font.${prop} :`, applyError);
+          }
+        });
+      }
+
       await context.sync();
+
+      if (isTrackingModified && typeof Word.ChangeTrackingMode !== "undefined") {
+        try {
+          context.document.changeTrackingMode = originalTrackingMode;
+          await context.sync();
+        } catch (restoreError) {
+          console.warn("[OfficeHelpers] Impossible de restaurer le suivi des modifications :", restoreError);
+        }
+      }
     });
   }
 
