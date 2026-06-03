@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp 
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" 
+  xsi:type="TaskPaneApp">
+
+  <!-- Identité de l'Add-in -->
+  <Id>f63a2347-eaef-4a94-81db-dbf5f4b5034c</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Mammouth IA</ProviderName>
+  <DefaultLocale>fr-FR</DefaultLocale>
+  
+  <!-- Affichage de base -->
+  <DisplayName DefaultValue="Mammouth IA" />
+  <Description DefaultValue="Intégrez la puissance des modèles d'IA de Mammouth IA directement dans Microsoft Word et Microsoft Excel." />
+  
+  <IconUrl DefaultValue="https://localhost:3000/assets/icon-32.png" />
+  <SupportUrl DefaultValue="https://mammouth.ai" />
+
+  <!-- Domaines de confiance (requis pour les appels d'API vers l'extérieur) -->
+  <AppDomains>
+    <AppDomain>https://api.mammouth.ai</AppDomain>
+  </AppDomains>
+
+  <!-- Hôtes pris en charge -->
+  <Hosts>
+    <Host Name="Document" /> <!-- Word -->
+    <Host Name="Workbook" /> <!-- Excel -->
+  </Hosts>
+
+  <!-- Paramètres par défaut (pour les versions d'Office sans prise en charge des commandes du ruban) -->
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://localhost:3000/src/taskpane/taskpane.html" />
+  </DefaultSettings>
+
+  <!-- Permissions de lecture et écriture dans le document -->
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <!-- Surcharges de version pour l'interface moderne (Ruban d'Office) -->
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      
+      <!-- Configuration pour Microsoft Word -->
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="MammouthGroupWord">
+                <Label resid="GroupLabel" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon16" />
+                  <bt:Image size="32" resid="Icon32" />
+                  <bt:Image size="80" resid="Icon80" />
+                </Icon>
+                <Control xsi:type="Button" id="MammouthButtonWord">
+                  <Label resid="ButtonLabel" />
+                  <Supertip>
+                    <Title resid="SuperTipTitle" />
+                    <Description resid="SuperTipDescription" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon16" />
+                    <bt:Image size="32" resid="Icon32" />
+                    <bt:Image size="80" resid="Icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="TaskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+
+      <!-- Configuration pour Microsoft Excel -->
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="MammouthGroupExcel">
+                <Label resid="GroupLabel" />
+                <Icon>
+                  <bt:Image size="16" resid="Icon16" />
+                  <bt:Image size="32" resid="Icon32" />
+                  <bt:Image size="80" resid="Icon80" />
+                </Icon>
+                <Control xsi:type="Button" id="MammouthButtonExcel">
+                  <Label resid="ButtonLabel" />
+                  <Supertip>
+                    <Title resid="SuperTipTitle" />
+                    <Description resid="SuperTipDescription" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon16" />
+                    <bt:Image size="32" resid="Icon32" />
+                    <bt:Image size="80" resid="Icon80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="TaskpaneUrl" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+      
+    </Hosts>
+
+    <!-- Ressources textuelles et graphiques -->
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon16" DefaultValue="https://localhost:3000/assets/icon-16.png" />
+        <bt:Image id="Icon32" DefaultValue="https://localhost:3000/assets/icon-32.png" />
+        <bt:Image id="Icon80" DefaultValue="https://localhost:3000/assets/icon-80.png" />
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="TaskpaneUrl" DefaultValue="https://localhost:3000/src/taskpane/taskpane.html" />
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GroupLabel" DefaultValue="Mammouth IA" />
+        <bt:String id="ButtonLabel" DefaultValue="Mammouth IA" />
+        <bt:String id="SuperTipTitle" DefaultValue="Assistant Mammouth IA" />
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="SuperTipDescription" DefaultValue="Ouvre le volet Mammouth IA pour générer du texte, corriger, poser des questions ou analyser vos données." />
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

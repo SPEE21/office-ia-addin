@@ -1,0 +1,23 @@
+{
+  "name": "mammouth-ia-office-addin",
+  "version": "1.0.0",
+  "description": "Add-in Office Word & Excel pour intégrer Mammouth IA",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:word": "office-addin-debugging start manifest.xml desktop --app word",
+    "start:excel": "office-addin-debugging start manifest.xml desktop --app excel",
+    "stop": "office-addin-debugging stop manifest.xml",
+    "validate": "office-addin-manifest validate manifest.xml"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "office-addin-debugging": "*",
+    "office-addin-dev-certs": "*",
+    "office-addin-manifest": "*"
+  },
+  "author": "Sébastien",
+  "license": "ISC"
+}

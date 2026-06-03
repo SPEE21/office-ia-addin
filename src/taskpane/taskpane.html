@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mammouth IA - Office Add-in</title>
+    <!-- Google Fonts Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Office.js Client library -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- CSS Styles -->
+    <link rel="stylesheet" href="taskpane.css">
+</head>
+<body class="dark-theme"> <!-- Thème sombre par défaut pour un aspect ultra-moderne -->
+
+    <div class="app-container">
+        <!-- En-tête de l'application -->
+        <header class="app-header">
+            <div class="header-main">
+                <img src="../../assets/icon-32.png" alt="Mammouth IA Logo" class="app-logo">
+                <div class="header-titles">
+                    <h1>Mammouth IA</h1>
+                    <span id="host-badge" class="badge">Initialisation...</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="theme-toggle-btn" class="icon-btn" title="Changer de thème">
+                    <i data-lucide="sun"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Notification de clé API manquante -->
+        <div id="key-warning-banner" class="warning-banner hidden">
+            <i data-lucide="key"></i>
+            <span>Clé API manquante. Configurez-la dans les réglages.</span>
+            <button id="go-to-settings-btn" class="banner-action-btn">Configurer</button>
+        </div>
+
+        <!-- Onglets de Navigation -->
+        <nav class="app-nav">
+            <button class="nav-tab active" data-tab="tab-chat">
+                <i data-lucide="message-square"></i>
+                <span>Chat</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-assistants">
+                <i data-lucide="sparkles"></i>
+                <span>Assistants</span>
+            </button>
+            <button class="nav-tab" data-tab="tab-settings">
+                <i data-lucide="settings"></i>
+                <span>Réglages</span>
+            </button>
+        </nav>
+
+        <!-- Contenu Principal -->
+        <main class="app-content">
+
+            <!-- ================= ONGLET CHAT ================= -->
+            <section id="tab-chat" class="tab-pane active">
+                <div class="chat-container">
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Message de bienvenue initial -->
+                        <div class="message system-message">
+                            <div class="message-content">
+                                <div class="welcome-logo-container">
+                                    <img src="../../assets/icon-80.png" alt="Mammouth IA" class="welcome-logo">
+                                </div>
+                                <h3>Bienvenue sur Mammouth IA !</h3>
+                                <p>Je suis votre assistant intelligent. Posez-moi des questions ou sélectionnez des éléments de votre document pour interagir.</p>
+                                <div class="welcome-suggestions">
+                                    <button class="suggestion-chip" data-prompt="Rédige une introduction captivante sur l'importance de l'IA en entreprise">"Rédige une introduction..."</button>
+                                    <button class="suggestion-chip" data-prompt="Aide-moi à structurer mon rapport financier">"Structure mon rapport..."</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Zone de saisie du chat -->
+                    <div class="chat-input-area">
+                        <div id="chat-context-indicator" class="context-indicator hidden">
+                            <span class="context-text"><i data-lucide="paperclip"></i> Contexte sélectionné inclus</span>
+                            <button id="clear-context-btn" class="clear-ctx-btn" title="Retirer le contexte"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="input-row">
+                            <textarea id="chat-input" placeholder="Posez une question..." rows="1"></textarea>
+                            <button id="send-chat-btn" class="send-btn" disabled>
+                                <i data-lucide="send"></i>
+                            </button>
+                        </div>
+                        <div class="input-options">
+                            <button id="include-selection-btn" class="option-toggle-btn" title="Inclure le texte ou tableau sélectionné comme contexte">
+                                <i data-lucide="file-text"></i>
+                                <span>Inclure la sélection</span>
+                            </button>
+                            <span id="chat-model-indicator" class="model-badge">gpt-4o</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= ONGLET ASSISTANTS ================= -->
+            <section id="tab-assistants" class="tab-pane">
+                <div class="assistants-container">
+                    
+                    <!-- VUE WORD (Affichée dynamiquement) -->
+                    <div id="assistants-word-view" class="host-assistant-view hidden">
+                        <div class="section-title">
+                            <h3>Actions rapides sur le texte</h3>
+                            <p>Sélectionnez du texte dans Word pour appliquer ces outils.</p>
+                        </div>
+                        
+                        <div class="action-card-grid">
+                            <!-- Reformulation -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon orange"><i data-lucide="refresh-cw"></i></div>
+                                    <div class="card-info">
+                                        <h4>Reformuler la sélection</h4>
+                                        <p>Réécrivez le texte selon le ton désiré.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="select-wrapper">
+                                        <select id="rewrite-tone">
+                                            <option value="professionnel">Professionnel & Formel</option>
+                                            <option value="elegant">Élégant & Soutenu</option>
+                                            <option value="persuasif">Persuasif & Commercial</option>
+                                            <option value="simple">Simple & Clair</option>
+                                            <option value="court">Synthétique & Court</option>
+                                            <option value="long">Détaillé & Développé</option>
+                                        </select>
+                                    </div>
+                                    <button id="btn-rewrite" class="btn btn-primary btn-block">Appliquer la réécriture</button>
+                                </div>
+                            </div>
+
+                            <!-- Correction orthographe -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon green"><i data-lucide="check-check"></i></div>
+                                    <div class="card-info">
+                                        <h4>Corriger et Améliorer</h4>
+                                        <p>Corrigez la grammaire, l'orthographe et le style.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <button id="btn-correct" class="btn btn-secondary btn-block">Corriger les fautes</button>
+                                </div>
+                            </div>
+
+                            <!-- Résumer -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon blue"><i data-lucide="align-left"></i></div>
+                                    <div class="card-info">
+                                        <h4>Synthétiser</h4>
+                                        <p>Générez un résumé structuré sous forme de puces.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <button id="btn-summarize" class="btn btn-secondary btn-block">Résumer la sélection</button>
+                                </div>
+                            </div>
+
+                            <!-- Continuer la rédaction -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon purple"><i data-lucide="edit-3"></i></div>
+                                    <div class="card-info">
+                                        <h4>Continuer la rédaction</h4>
+                                        <p>Laissez l'IA rédiger la suite logique de votre texte.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <button id="btn-continue" class="btn btn-secondary btn-block">Rédiger la suite</button>
+                                </div>
+                            </div>
+
+                            <!-- Génération à partir d'un prompt -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon red"><i data-lucide="pen-tool"></i></div>
+                                    <div class="card-info">
+                                        <h4>Générateur de texte libre</h4>
+                                        <p>Rédigez du contenu à la position de votre curseur.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <textarea id="prompt-generator" placeholder="Ex: Rédige une lettre de relance commerciale polie..." rows="2"></textarea>
+                                    <button id="btn-generate-text" class="btn btn-primary btn-block">Générer et Insérer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VUE EXCEL (Affichée dynamiquement) -->
+                    <div id="assistants-excel-view" class="host-assistant-view hidden">
+                        <div class="section-title">
+                            <h3>Actions intelligentes sur données</h3>
+                            <p>Utilisez l'IA pour générer des formules ou analyser vos tableaux.</p>
+                        </div>
+
+                        <div class="action-card-grid">
+                            <!-- Générateur de formules -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon green"><i data-lucide="binary"></i></div>
+                                    <div class="card-info">
+                                        <h4>Générateur de Formules</h4>
+                                        <p>Décrivez la formule souhaitée en français.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <textarea id="formula-instruction" placeholder="Ex: Faire la somme de B1 à B10 si A1 à A10 est égal à 'Payé'..." rows="2"></textarea>
+                                    <button id="btn-generate-formula" class="btn btn-primary btn-block">Créer la formule</button>
+                                    
+                                    <div id="formula-result-container" class="formula-result hidden">
+                                        <div class="result-title">Formule générée :</div>
+                                        <code id="formula-code">=SOMME.SI(...)</code>
+                                        <div class="formula-actions">
+                                            <button id="btn-insert-formula" class="btn btn-small btn-success"><i data-lucide="plus"></i> Insérer</button>
+                                            <button id="btn-copy-formula" class="btn btn-small btn-secondary"><i data-lucide="copy"></i> Copier</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Analyse de données -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon orange"><i data-lucide="bar-chart-2"></i></div>
+                                    <div class="card-info">
+                                        <h4>Analyser la sélection</h4>
+                                        <p>Sélectionnez un tableau de données à analyser.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <button id="btn-analyze-excel" class="btn btn-primary btn-block">Lancer l'analyse</button>
+                                </div>
+                            </div>
+
+                            <!-- Remplissage intelligent -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon blue"><i data-lucide="grid"></i></div>
+                                    <div class="card-info">
+                                        <h4>Remplissage Intelligent</h4>
+                                        <p>Complétez les cases vides en fonction d'un modèle.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <textarea id="fill-instruction" placeholder="Ex: Extraire le prénom à partir de l'email présent dans la colonne A..." rows="2"></textarea>
+                                    <button id="btn-fill-excel" class="btn btn-secondary btn-block">Remplir les cellules</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Zone de résultats d'assistants (Word & Excel) -->
+                    <div id="assistant-results-wrapper" class="assistant-results hidden">
+                        <div class="results-header">
+                            <span class="results-title"><i data-lucide="sparkles"></i> Résultat de l'assistant</span>
+                            <button id="btn-close-results" class="close-results-btn" title="Fermer"><i data-lucide="x"></i></button>
+                        </div>
+                        <div class="results-content-container">
+                            <div id="assistant-results-text" class="results-content markdown-body">
+                                <!-- Le texte généré s'affichera ici -->
+                            </div>
+                            <div class="shimmer-loader hidden">
+                                <div class="shimmer-line"></div>
+                                <div class="shimmer-line"></div>
+                                <div class="shimmer-line"></div>
+                            </div>
+                        </div>
+                        <div id="assistant-results-actions" class="results-actions">
+                            <button id="btn-results-apply" class="btn btn-success"><i data-lucide="check"></i> Remplacer la sélection</button>
+                            <button id="btn-results-insert" class="btn btn-secondary"><i data-lucide="plus"></i> Insérer après</button>
+                            <button id="btn-results-copy" class="btn btn-icon-only" title="Copier dans le presse-papier"><i data-lucide="copy"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= ONGLET PARAMÈTRES ================= -->
+            <section id="tab-settings" class="tab-pane">
+                <div class="settings-container">
+                    <h3>Configuration Globale</h3>
+                    <p class="settings-desc">Configurez vos accès sécurisés pour profiter de Mammouth IA.</p>
+                    
+                    <!-- Section API Key -->
+                    <div class="setting-group">
+                        <label for="api-key-input">Clé API Mammouth IA</label>
+                        <div class="input-password-wrapper">
+                            <input type="password" id="api-key-input" placeholder="Saisir votre clé api (sk-...)">
+                            <button id="toggle-password-btn" class="icon-btn" title="Afficher/Masquer la clé">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                        <span class="input-help">Votre clé est conservée localement dans votre espace sécurisé.</span>
+                        <div class="settings-action-row">
+                            <button id="save-api-key-btn" class="btn btn-primary">Enregistrer la clé</button>
+                            <span id="api-status-indicator" class="api-status-tag unconfigured">
+                                <span class="dot"></span> <span class="status-text">Non configuré</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Section Choix Modèle -->
+                    <div class="setting-group">
+                        <label for="model-select">Modèle d'IA préféré</label>
+                        <div class="select-wrapper">
+                            <select id="model-select" disabled>
+                                <option value="loading">Chargement des modèles...</option>
+                            </select>
+                        </div>
+                        <button id="refresh-models-btn" class="btn btn-small btn-secondary mt-8" disabled>
+                            <i data-lucide="refresh-cw"></i> Rafraîchir les modèles
+                        </button>
+                    </div>
+
+                    <!-- Section Thème & Apparence -->
+                    <div class="setting-group">
+                        <label>Apparence</label>
+                        <div class="theme-selection-row">
+                            <button class="theme-choice-btn active" data-theme="dark">
+                                <i data-lucide="moon"></i> Sombre
+                            </button>
+                            <button class="theme-choice-btn" data-theme="light">
+                                <i data-lucide="sun"></i> Clair
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Infos système -->
+                    <div class="settings-info-footer">
+                        <div class="info-row">
+                            <span>Hôte détecté :</span>
+                            <strong id="info-host-name">Recherche...</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Version Add-in :</span>
+                            <strong>1.0.0</strong>
+                        </div>
+                        <div class="info-row">
+                            <span>Statut Office.js :</span>
+                            <strong id="info-office-status">Inactif</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripts de logique -->
+    <script src="../helpers/mammouth.js"></script>
+    <script src="../helpers/office-helpers.js"></script>
+    <script src="taskpane.js"></script>
+</body>
+</html>
