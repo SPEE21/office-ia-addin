@@ -195,6 +195,21 @@
                                     <button id="btn-generate-text" class="btn btn-primary btn-block">Générer et Insérer</button>
                                 </div>
                             </div>
+
+                            <!-- Générateur d'images -->
+                            <div class="action-card">
+                                <div class="card-header">
+                                    <div class="card-icon red"><i data-lucide="image"></i></div>
+                                    <div class="card-info">
+                                        <h4>Générateur d'images</h4>
+                                        <p>Générez et insérez une image dans le corps de texte.</p>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <textarea id="prompt-image-generator" placeholder="Ex: Un mammouth moderne travaillant sur un ordinateur, style 3D..." rows="2"></textarea>
+                                    <button id="btn-generate-image" class="btn btn-primary btn-block">Générer et Insérer</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -312,12 +327,35 @@
 
                     <!-- Section Choix Modèle -->
                     <div class="setting-group">
-                        <label for="model-select">Modèle d'IA préféré</label>
-                        <div class="select-wrapper">
-                            <select id="model-select" disabled>
-                                <option value="loading">Chargement des modèles...</option>
-                            </select>
+                        <label>Modèles d'IA préférés</label>
+                        
+                        <div class="model-select-item">
+                            <span class="model-select-label">Tâches simples :</span>
+                            <div class="select-wrapper">
+                                <select id="model-select-simple" disabled>
+                                    <option value="loading">Chargement des modèles...</option>
+                                </select>
+                            </div>
                         </div>
+
+                        <div class="model-select-item mt-8">
+                            <span class="model-select-label">Tâches complexes :</span>
+                            <div class="select-wrapper">
+                                <select id="model-select-complex" disabled>
+                                    <option value="loading">Chargement des modèles...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="model-select-item mt-8">
+                            <span class="model-select-label">Génération d'images :</span>
+                            <div class="select-wrapper">
+                                <select id="model-select-image" disabled>
+                                    <option value="loading">Chargement des modèles...</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <button id="refresh-models-btn" class="btn btn-small btn-secondary mt-8" disabled>
                             <i data-lucide="refresh-cw"></i> Rafraîchir les modèles
                         </button>

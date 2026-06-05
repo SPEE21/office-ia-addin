@@ -253,6 +253,64 @@ class OfficeHelpers {
       await context.sync();
     });
   }
+
+  /**
+   * Insère une image (au format base64) dans le document Word à la position de la sélection.
+   * @param {string} base64Image - Données de l'image en base64 (avec ou sans préfixe).
+   * @param {'replace' | 'after' | 'before'} location - Emplacement de l'insertion.
+   */
+  async insertImageWord(base64Image, location = "replace") {
+    if (this.getHost() !== "Word") return;
+
+    return Word.run(async (context) => {
+      const selection = context.document.getSelection();
+      let wordLocation;
+      
+      switch (location) {
+        case "after":
+          wordLocation = Word.InsertLocation.after;
+          break;
+        case "before":
+          wordLocation = Word.InsertLocation.before;
+          break;
+        case "replace":
+        default:
+          wordLocation = Word.InsertLocation.replace;
+          break;
+      }
+      
+      const rawBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+      selection.insertInlinePictureFromBase64(rawBase64, wordLocation);
+      await context.sync();
+    });
+  }
+
+  /**
+   * Insère une image (au format base64) dans la feuille Excel active.
+   * @param {string} base64Image - Données de l'image en base64 (avec ou sans préfixe).
+   */
+  async insertImageExcel(base64Image) {
+    if (this.getHost() !== "Excel") return;
+
+    return Excel.run(async (context) => {
+      const activeSheet = context.workbook.worksheets.getActiveWorksheet();
+      const rawBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+      const shape = activeSheet.shapes.addImage(rawBase64);
+      
+      try {
+        const range = context.workbook.getSelectedRange();
+        range.load(["top", "left"]);
+        await context.sync();
+        
+        shape.left = range.left;
+        shape.top = range.top;
+      } catch (e) {
+        console.warn("[OfficeHelpers] Impossible de positionner le shape par rapport à la sélection:", e);
+      }
+      
+      await context.sync();
+    });
+  }
 }
 
 // Exposer pour les scripts

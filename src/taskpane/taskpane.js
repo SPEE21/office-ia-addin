@@ -4,7 +4,9 @@ let mammouthClient;
 
 let currentHost = "Browser";
 let apiKey = "";
-let selectedModel = "gpt-4o";
+let selectedModelSimple = "gpt-4o-mini";
+let selectedModelComplex = "gpt-4o";
+let selectedModelImage = "dall-e-3";
 let isContextActive = false;
 
 // Initialiser Office.js
@@ -66,7 +68,9 @@ function initApp() {
 
 function loadSettings() {
   apiKey = localStorage.getItem("mammouth_api_key") || "";
-  selectedModel = localStorage.getItem("mammouth_selected_model") || "gpt-4o";
+  selectedModelSimple = localStorage.getItem("mammouth_model_simple") || "gpt-4o-mini";
+  selectedModelComplex = localStorage.getItem("mammouth_model_complex") || "gpt-4o";
+  selectedModelImage = localStorage.getItem("mammouth_model_image") || "dall-e-3";
   const theme = localStorage.getItem("mammouth_theme") || "dark";
   const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
 
@@ -128,10 +132,23 @@ function updateKeyWarningBanner() {
 /**
  * Valide la clé API entrée, charge les modèles et met à jour l'UI.
  */
+/**
+ * Classifie dynamiquement le type de modèle d'IA (texte ou image).
+ */
+function getModelType(modelId) {
+  const id = (modelId || "").toLowerCase();
+  if (id.includes("dall-e") || id.includes("flux") || id.includes("diffusion") || id.includes("sdxl") || id.includes("midjourney") || id.includes("image")) {
+    return "image";
+  }
+  return "text";
+}
+
 async function validateAndLoadModels(isSilent = false) {
   const statusIndicator = document.getElementById("api-status-indicator");
   const statusText = statusIndicator.querySelector(".status-text");
-  const modelSelect = document.getElementById("model-select");
+  const modelSelectSimple = document.getElementById("model-select-simple");
+  const modelSelectComplex = document.getElementById("model-select-complex");
+  const modelSelectImage = document.getElementById("model-select-image");
   const refreshBtn = document.getElementById("refresh-models-btn");
 
   if (!apiKey) {
@@ -155,30 +172,54 @@ async function validateAndLoadModels(isSilent = false) {
     updateKeyWarningBanner();
 
     // Charger les modèles
-    modelSelect.disabled = false;
+    modelSelectSimple.disabled = false;
+    modelSelectComplex.disabled = false;
+    modelSelectImage.disabled = false;
     refreshBtn.disabled = false;
-    modelSelect.innerHTML = '<option value="">Chargement...</option>';
+    
+    modelSelectSimple.innerHTML = '<option value="">Chargement...</option>';
+    modelSelectComplex.innerHTML = '<option value="">Chargement...</option>';
+    modelSelectImage.innerHTML = '<option value="">Chargement...</option>';
 
     const models = await mammouthClient.getModels();
-    modelSelect.innerHTML = "";
+    
+    modelSelectSimple.innerHTML = "";
+    modelSelectComplex.innerHTML = "";
+    modelSelectImage.innerHTML = "";
 
     models.forEach(model => {
+      const type = getModelType(model.id);
       const option = document.createElement("option");
       option.value = model.id;
       option.textContent = model.name || model.id;
-      if (model.id === selectedModel) option.selected = true;
-      modelSelect.appendChild(option);
+      
+      if (type === "text") {
+        const optionSimple = option.cloneNode(true);
+        if (model.id === selectedModelSimple) optionSimple.selected = true;
+        modelSelectSimple.appendChild(optionSimple);
+
+        const optionComplex = option.cloneNode(true);
+        if (model.id === selectedModelComplex) optionComplex.selected = true;
+        modelSelectComplex.appendChild(optionComplex);
+      } else if (type === "image") {
+        if (model.id === selectedModelImage) option.selected = true;
+        modelSelectImage.appendChild(option);
+      }
     });
 
     // Mettre à jour l'indicateur de modèle dans le chat
-    document.getElementById("chat-model-indicator").textContent = selectedModel;
+    document.getElementById("chat-model-indicator").textContent = selectedModelComplex;
 
   } catch (error) {
     console.error(error);
     statusIndicator.className = "api-status-tag unconfigured";
     statusText.textContent = "Erreur de clé";
-    modelSelect.innerHTML = '<option value="error">Erreur de connexion</option>';
-    modelSelect.disabled = true;
+    modelSelectSimple.innerHTML = '<option value="error">Erreur de connexion</option>';
+    modelSelectComplex.innerHTML = '<option value="error">Erreur de connexion</option>';
+    modelSelectImage.innerHTML = '<option value="error">Erreur de connexion</option>';
+    modelSelectSimple.disabled = true;
+    modelSelectComplex.disabled = true;
+    modelSelectImage.disabled = true;
     refreshBtn.disabled = true;
     
     if (!isSilent) {
@@ -247,12 +288,24 @@ function setupEventListeners() {
     validateAndLoadModels(false);
   });
 
-  // Modifier le modèle préféré
-  const modelSelect = document.getElementById("model-select");
-  modelSelect.addEventListener("change", () => {
-    selectedModel = modelSelect.value;
-    localStorage.setItem("mammouth_selected_model", selectedModel);
-    document.getElementById("chat-model-indicator").textContent = selectedModel;
+  // Modifier les modèles préférés
+  const modelSelectSimple = document.getElementById("model-select-simple");
+  modelSelectSimple.addEventListener("change", () => {
+    selectedModelSimple = modelSelectSimple.value;
+    localStorage.setItem("mammouth_model_simple", selectedModelSimple);
+  });
+
+  const modelSelectComplex = document.getElementById("model-select-complex");
+  modelSelectComplex.addEventListener("change", () => {
+    selectedModelComplex = modelSelectComplex.value;
+    localStorage.setItem("mammouth_model_complex", selectedModelComplex);
+    document.getElementById("chat-model-indicator").textContent = selectedModelComplex;
+  });
+
+  const modelSelectImage = document.getElementById("model-select-image");
+  modelSelectImage.addEventListener("change", () => {
+    selectedModelImage = modelSelectImage.value;
+    localStorage.setItem("mammouth_model_image", selectedModelImage);
   });
 
   // Modifier l'option mode révision
@@ -378,12 +431,35 @@ function setupEventListeners() {
       const messages = [{ role: "user", content: prompt }];
       let result = "";
       
-      await mammouthClient.chatCompletion(apiKey, selectedModel, messages, (chunk) => {
+      await mammouthClient.chatCompletion(apiKey, selectedModelComplex, messages, (chunk) => {
         result += chunk;
         updateAssistantText(result);
       });
     } catch (err) {
       updateAssistantText(`Erreur lors de la génération: ${err.message}`);
+    }
+  });
+
+  // Générer et insérer une image Word
+  document.getElementById("btn-generate-image").addEventListener("click", async () => {
+    const prompt = document.getElementById("prompt-image-generator").value.trim();
+    if (!prompt) return alert("Veuillez décrire l'image que vous souhaitez générer.");
+
+    showAssistantResults();
+    try {
+      updateAssistantText("Mammouth IA génère votre image (cela peut prendre quelques secondes)...");
+      
+      const base64Image = await mammouthClient.generateImage(apiKey, selectedModelImage, prompt);
+      
+      updateAssistantImage(base64Image);
+      
+      if (currentHost === "Word") {
+        await officeHelpers.insertImageWord(base64Image, "replace");
+      } else if (currentHost === "Excel") {
+        await officeHelpers.insertImageExcel(base64Image);
+      }
+    } catch (err) {
+      updateAssistantText(`Erreur lors de la génération de l'image: ${err.message}`);
     }
   });
 
@@ -412,7 +488,7 @@ function setupEventListeners() {
       ];
       
       let formula = "";
-      await mammouthClient.chatCompletion(apiKey, selectedModel, messages, (chunk) => {
+      await mammouthClient.chatCompletion(apiKey, selectedModelSimple, messages, (chunk) => {
         formula += chunk;
         codeElement.textContent = formula.trim();
       });
@@ -460,7 +536,7 @@ function setupEventListeners() {
       ];
 
       let analysis = "";
-      await mammouthClient.chatCompletion(apiKey, selectedModel, messages, (chunk) => {
+      await mammouthClient.chatCompletion(apiKey, selectedModelComplex, messages, (chunk) => {
         analysis += chunk;
         updateAssistantText(analysis);
       });
@@ -499,7 +575,7 @@ function setupEventListeners() {
       ];
 
       let jsonResponse = "";
-      await mammouthClient.chatCompletion(apiKey, selectedModel, messages, (chunk) => {
+      await mammouthClient.chatCompletion(apiKey, selectedModelComplex, messages, (chunk) => {
         jsonResponse += chunk;
         updateAssistantText("Calcul du tableau JSON...\n\n" + jsonResponse);
       });
@@ -608,7 +684,7 @@ async function sendChatMessage() {
 
   try {
     let fullResponse = "";
-    await mammouthClient.chatCompletion(apiKey, selectedModel, messages, (chunk) => {
+    await mammouthClient.chatCompletion(apiKey, selectedModelComplex, messages, (chunk) => {
       // Retirer le shimmer au premier chunk
       if (fullResponse === "") {
         aiContentDiv.innerHTML = "";
@@ -723,7 +799,7 @@ async function runWordAssistant(actionName, systemInstruction) {
     ];
 
     let fullOutput = "";
-    await mammouthClient.chatCompletion(apiKey, selectedModel, messages, (chunk) => {
+    await mammouthClient.chatCompletion(apiKey, selectedModelSimple, messages, (chunk) => {
       fullOutput += chunk;
       updateAssistantText(fullOutput);
     });
@@ -747,6 +823,10 @@ function showAssistantResults() {
   textDiv.innerHTML = "";
   shimmer.classList.remove("hidden");
   actions.classList.add("hidden");
+  
+  // Réafficher les boutons d'actions au cas où ils ont été masqués par l'affichage d'une image
+  document.getElementById("btn-results-apply").classList.remove("hidden");
+  document.getElementById("btn-results-insert").classList.remove("hidden");
 }
 
 function hideAssistantResults() {
@@ -762,6 +842,34 @@ function updateAssistantText(text) {
   shimmer.classList.add("hidden");
   textDiv.innerHTML = formatMarkdown(text);
   actions.classList.remove("hidden");
+}
+
+function updateAssistantImage(base64Image) {
+  const panel = document.getElementById("assistant-results-wrapper");
+  const textDiv = document.getElementById("assistant-results-text");
+  const shimmer = panel.querySelector(".shimmer-loader");
+  const actions = document.getElementById("assistant-results-actions");
+
+  shimmer.classList.add("hidden");
+  
+  let imgSrc = base64Image;
+  if (!imgSrc.startsWith("data:image")) {
+    imgSrc = `data:image/png;base64,${base64Image}`;
+  }
+  
+  textDiv.innerHTML = `
+    <div style="text-align: center; color: var(--color-green); font-weight: 600; margin-bottom: 8px;">
+      <i data-lucide="check-circle" style="vertical-align: middle; width: 16px; height: 16px;"></i> Image insérée avec succès !
+    </div>
+    <img src="${imgSrc}" class="generated-image-preview" alt="Image générée">
+  `;
+  
+  // Cacher les actions de texte non applicables à une image
+  document.getElementById("btn-results-apply").classList.add("hidden");
+  document.getElementById("btn-results-insert").classList.add("hidden");
+  
+  actions.classList.remove("hidden");
+  lucide.createIcons();
 }
 
 // =========================================================================
