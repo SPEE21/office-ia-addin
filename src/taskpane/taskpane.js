@@ -362,6 +362,36 @@ function setupEventListeners() {
     document.getElementById("chat-context-indicator").classList.add("hidden");
   });
 
+  // Importer la sélection directement dans le chat
+  document.getElementById("import-selection-btn").addEventListener("click", async () => {
+    try {
+      let selectionText = "";
+      if (currentHost === "Word") {
+        selectionText = await officeHelpers.getSelectedTextWord();
+      } else if (currentHost === "Excel") {
+        const data = await officeHelpers.getSelectedExcelData();
+        if (data && data.hasData) {
+          selectionText = data.markdown;
+        }
+      }
+
+      if (selectionText && selectionText.trim() !== "") {
+        const chatInput = document.getElementById("chat-input");
+        const separator = chatInput.value.trim() === "" ? "" : "\n\n";
+        chatInput.value = chatInput.value + separator + `"""\n${selectionText.trim()}\n"""\n`;
+        
+        // Déclencher l'auto-grow du textarea et l'activer
+        chatInput.dispatchEvent(new Event("input"));
+        chatInput.focus();
+      } else {
+        alert("Aucun texte ou tableau n'est actuellement sélectionné dans le document.");
+      }
+    } catch (err) {
+      console.error("Erreur lors de l'importation de la sélection :", err);
+      alert("Impossible d'importer la sélection.");
+    }
+  });
+
   // Fermer le panneau flottant de résultats d'assistants
   document.getElementById("btn-close-results").addEventListener("click", hideAssistantResults);
 
@@ -747,29 +777,51 @@ function addMessageActionButtons(messageDiv, text) {
     lucide.createIcons();
   };
 
-  // Bouton Insérer
-  const insertBtn = document.createElement("button");
-  insertBtn.className = "msg-action-btn";
-  insertBtn.innerHTML = '<i data-lucide="plus"></i> Insérer';
-  insertBtn.onclick = async () => {
+  // Bouton Remplacer
+  const replaceBtn = document.createElement("button");
+  replaceBtn.className = "msg-action-btn";
+  replaceBtn.innerHTML = '<i data-lucide="check"></i> Remplacer';
+  replaceBtn.onclick = async () => {
     if (currentHost === "Word") {
       const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
       await officeHelpers.insertTextWord(text, "replace", trackChanges);
-      insertBtn.innerHTML = '<i data-lucide="check"></i> Inséré !';
+      replaceBtn.innerHTML = '<i data-lucide="check-check"></i> Remplacé !';
     } else if (currentHost === "Excel") {
       await officeHelpers.writeExcelSelection(text, false);
-      insertBtn.innerHTML = '<i data-lucide="check"></i> Inséré !';
+      replaceBtn.innerHTML = '<i data-lucide="check-check"></i> Remplacé !';
     } else {
       alert("Action disponible uniquement dans Word ou Excel.");
     }
     setTimeout(() => {
-      insertBtn.innerHTML = '<i data-lucide="plus"></i> Insérer';
+      replaceBtn.innerHTML = '<i data-lucide="check"></i> Remplacer';
+      lucide.createIcons();
+    }, 2000);
+    lucide.createIcons();
+  };
+
+  // Bouton Insérer après
+  const insertBtn = document.createElement("button");
+  insertBtn.className = "msg-action-btn";
+  insertBtn.innerHTML = '<i data-lucide="plus"></i> Insérer après';
+  insertBtn.onclick = async () => {
+    if (currentHost === "Word") {
+      const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
+      await officeHelpers.insertTextWord(text, "after", trackChanges);
+      insertBtn.innerHTML = '<i data-lucide="check"></i> Inséré !';
+    } else if (currentHost === "Excel") {
+      alert("Veuillez sélectionner la cellule cible dans Excel pour y insérer la donnée.");
+    } else {
+      alert("Action disponible uniquement dans Word ou Excel.");
+    }
+    setTimeout(() => {
+      insertBtn.innerHTML = '<i data-lucide="plus"></i> Insérer après';
       lucide.createIcons();
     }, 2000);
     lucide.createIcons();
   };
 
   actionsDiv.appendChild(copyBtn);
+  actionsDiv.appendChild(replaceBtn);
   actionsDiv.appendChild(insertBtn);
   messageDiv.appendChild(actionsDiv);
   
