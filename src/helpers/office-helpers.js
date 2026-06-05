@@ -160,7 +160,7 @@ class OfficeHelpers {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // 2. Construire les styles inline à partir du fontBackup
+    // 2. Construire les styles de police inline à partir du fontBackup
     let styleString = "";
     if (fontBackup) {
       if (fontBackup.name) styleString += `font-family: '${fontBackup.name}'; `;
@@ -181,8 +181,18 @@ class OfficeHelpers {
 
     const flushParagraph = () => {
       if (paragraphLines.length > 0) {
-        const content = paragraphLines.join("<br>");
-        processedLines.push(`<p${styleAttr}>${content}</p>`);
+        paragraphLines.forEach((lineText, index) => {
+          const isLastLine = index === paragraphLines.length - 1;
+          // Pour éviter que Word n'étende le texte justifié sur les lignes intermédiaires (comme avec un Shift+Enter),
+          // on insère chaque ligne comme un paragraphe indépendant, mais avec des marges réduites à 0.
+          let lineStyle = "margin-top: 0pt; ";
+          if (!isLastLine) {
+            lineStyle += "margin-bottom: 0pt; ";
+          }
+          
+          let combinedStyle = lineStyle + styleString;
+          processedLines.push(`<p style="${combinedStyle}">${lineText}</p>`);
+        });
         paragraphLines = [];
       }
     };
