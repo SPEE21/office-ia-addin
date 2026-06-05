@@ -109,9 +109,11 @@ class OfficeHelpers {
         }
       }
 
-      const insertedRange = selection.insertText(text, wordLocation);
+      // Convertir le texte en HTML avec le formatage Markdown et la police d'origine
+      const htmlContent = this._markdownToHtmlForWord(text, fontBackup);
+      const insertedRange = selection.insertHtml(htmlContent, wordLocation);
 
-      // Réappliquer le formatage sauvegardé sur le nouveau range
+      // Réappliquer le formatage sauvegardé sur le nouveau range (en deuxième niveau de sécurité)
       if (insertedRange && insertedRange.font) {
         Object.keys(fontBackup).forEach(prop => {
           try {
@@ -133,6 +135,97 @@ class OfficeHelpers {
         }
       }
     });
+  }
+
+  /**
+   * Convertit un texte markdown en HTML propre pour Word en appliquant les styles de police d'origine.
+   * @private
+   */
+  _markdownToHtmlForWord(markdownText, fontBackup) {
+    // 1. Échapper les caractères HTML pour éviter les conflits
+    let escaped = markdownText
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // 2. Traiter ligne par ligne pour les listes et titres
+    const lines = escaped.split("\n");
+    let inList = false;
+    const processedLines = [];
+
+    for (let line of lines) {
+      const trimmed = line.trim();
+      
+      // Titres (Heading 1, 2, 3)
+      if (trimmed.startsWith("### ")) {
+        if (inList) { processedLines.push("</ul>"); inList = false; }
+        processedLines.push(`<h3>${trimmed.substring(4)}</h3>`);
+      } else if (trimmed.startsWith("## ")) {
+        if (inList) { processedLines.push("</ul>"); inList = false; }
+        processedLines.push(`<h2>${trimmed.substring(3)}</h2>`);
+      } else if (trimmed.startsWith("# ")) {
+        if (inList) { processedLines.push("</ul>"); inList = false; }
+        processedLines.push(`<h1>${trimmed.substring(2)}</h1>`);
+      }
+      // Listes à puces
+      else if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
+        if (!inList) {
+          processedLines.push("<ul>");
+          inList = true;
+        }
+        const itemText = trimmed.replace(/^[-*•]\s+/, "");
+        processedLines.push(`<li>${itemText}</li>`);
+      } else {
+        if (inList) {
+          processedLines.push("</ul>");
+          inList = false;
+        }
+        processedLines.push(line);
+      }
+    }
+    if (inList) {
+      processedLines.push("</ul>");
+    }
+    
+    let html = processedLines.join("\n");
+
+    // 3. Convertir le gras (**texte** ou __texte__)
+    html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
+
+    // 4. Convertir l'italique (*texte* ou _texte_)
+    html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+    html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+
+    // 5. Convertir le code en ligne (`code`)
+    html = html.replace(/`(.*?)`/g, "<code>$1</code>");
+
+    // 6. Remplacer les retours à la ligne restants par des <br> pour Word
+    html = html.replace(/\n/g, "<br>");
+    
+    // Nettoyer les sauts de ligne superflus créés par le découpage de lignes autour des balises de bloc
+    html = html.replace(/<\/ul><br>/g, "</ul>");
+    html = html.replace(/<\/li><br>/g, "</li>");
+    html = html.replace(/<\/h1><br>/g, "</h1>");
+    html = html.replace(/<\/h2><br>/g, "</h2>");
+    html = html.replace(/<\/h3><br>/g, "</h3>");
+
+    // 7. Construire les styles inline à partir du fontBackup
+    let styleString = "";
+    if (fontBackup) {
+      if (fontBackup.name) styleString += `font-family: '${fontBackup.name}'; `;
+      if (fontBackup.size) styleString += `font-size: ${fontBackup.size}pt; `;
+      if (fontBackup.color) styleString += `color: ${fontBackup.color}; `;
+      if (fontBackup.bold === true) styleString += `font-weight: bold; `;
+      if (fontBackup.italic === true) styleString += `font-style: italic; `;
+      if (fontBackup.underline && fontBackup.underline !== "None") styleString += `text-decoration: underline; `;
+    }
+
+    if (styleString) {
+      html = `<span style="${styleString}">${html}</span>`;
+    }
+
+    return html;
   }
 
   // =========================================================================
