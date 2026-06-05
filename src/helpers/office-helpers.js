@@ -172,51 +172,79 @@ class OfficeHelpers {
     }
     const styleAttr = styleString ? ` style="${styleString}"` : "";
 
-    // 3. Traiter ligne par ligne pour les listes, titres et paragraphes
+    // 3. Traiter ligne par ligne avec un accumulateur de paragraphe
     const lines = escaped.split("\n");
     let inList = false;
+    let paragraphLines = [];
+    let emptyLineCount = 0;
     const processedLines = [];
+
+    const flushParagraph = () => {
+      if (paragraphLines.length > 0) {
+        const content = paragraphLines.join("<br>");
+        processedLines.push(`<p${styleAttr}>${content}</p>`);
+        paragraphLines = [];
+      }
+    };
+
+    const closeList = () => {
+      if (inList) {
+        processedLines.push("</ul>");
+        inList = false;
+      }
+    };
 
     for (let line of lines) {
       const trimmed = line.trim();
       
-      // Titres (Heading 1, 2, 3)
       if (trimmed.startsWith("### ")) {
-        if (inList) { processedLines.push("</ul>"); inList = false; }
+        flushParagraph();
+        closeList();
+        emptyLineCount = 0;
         processedLines.push(`<h3${styleAttr}>${trimmed.substring(4)}</h3>`);
       } else if (trimmed.startsWith("## ")) {
-        if (inList) { processedLines.push("</ul>"); inList = false; }
+        flushParagraph();
+        closeList();
+        emptyLineCount = 0;
         processedLines.push(`<h2${styleAttr}>${trimmed.substring(3)}</h2>`);
       } else if (trimmed.startsWith("# ")) {
-        if (inList) { processedLines.push("</ul>"); inList = false; }
+        flushParagraph();
+        closeList();
+        emptyLineCount = 0;
         processedLines.push(`<h1${styleAttr}>${trimmed.substring(2)}</h1>`);
       }
       // Listes à puces
       else if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
+        flushParagraph();
+        emptyLineCount = 0;
         if (!inList) {
           processedLines.push(`<ul${styleAttr}>`);
           inList = true;
         }
         const itemText = trimmed.replace(/^[-*•]\s+/, "");
         processedLines.push(`<li${styleAttr}>${itemText}</li>`);
-      } else {
-        if (inList) {
-          processedLines.push("</ul>");
-          inList = false;
-        }
-        
-        // Si c'est une ligne vide, on ajoute un paragraphe vide,
-        // sinon un paragraphe classique.
-        if (trimmed === "") {
+      } 
+      // Ligne vide
+      else if (trimmed === "") {
+        flushParagraph();
+        closeList();
+        emptyLineCount++;
+        // On n'ajoute un paragraphe vide physique que s'il y a plus d'une ligne vide consécutive
+        if (emptyLineCount > 1) {
           processedLines.push(`<p${styleAttr}>&nbsp;</p>`);
-        } else {
-          processedLines.push(`<p${styleAttr}>${line}</p>`);
         }
+      } 
+      // Ligne de texte normale
+      else {
+        closeList();
+        emptyLineCount = 0;
+        paragraphLines.push(line);
       }
     }
-    if (inList) {
-      processedLines.push("</ul>");
-    }
+
+    // Flush final
+    flushParagraph();
+    closeList();
     
     let html = processedLines.join("\n");
 
