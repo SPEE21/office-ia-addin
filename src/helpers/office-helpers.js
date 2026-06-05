@@ -117,7 +117,19 @@ class OfficeHelpers {
       if (insertedRange && insertedRange.font) {
         Object.keys(fontBackup).forEach(prop => {
           try {
-            insertedRange.font[prop] = fontBackup[prop];
+            // Ne réappliquer les modificateurs de style (bold, italic, etc.) que s'ils sont actifs (true)
+            // afin de ne pas écraser les styles spécifiques du HTML inséré (comme les balises strong/em).
+            if (prop === "name" || prop === "size" || prop === "color") {
+              insertedRange.font[prop] = fontBackup[prop];
+            } else if (prop === "bold" && fontBackup[prop] === true) {
+              insertedRange.font[prop] = true;
+            } else if (prop === "italic" && fontBackup[prop] === true) {
+              insertedRange.font[prop] = true;
+            } else if (prop === "strikeThrough" && fontBackup[prop] === true) {
+              insertedRange.font[prop] = true;
+            } else if (prop === "underline" && fontBackup[prop] !== "None" && fontBackup[prop] !== "") {
+              insertedRange.font[prop] = fontBackup[prop];
+            }
           } catch (applyError) {
             console.warn(`[OfficeHelpers] Impossible de réappliquer la propriété font.${prop} :`, applyError);
           }
