@@ -369,12 +369,13 @@ function setupEventListeners() {
   const resultTextElement = document.getElementById("assistant-results-text");
   
   document.getElementById("btn-results-copy").addEventListener("click", () => {
-    navigator.clipboard.writeText(resultTextElement.textContent);
+    const text = resultTextElement.dataset.rawText || resultTextElement.innerText;
+    navigator.clipboard.writeText(text);
     alert("Copié dans le presse-papier !");
   });
 
   document.getElementById("btn-results-apply").addEventListener("click", async () => {
-    const text = resultTextElement.textContent;
+    const text = resultTextElement.dataset.rawText || resultTextElement.innerText;
     if (currentHost === "Word") {
       const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
       await officeHelpers.insertTextWord(text, "replace", trackChanges);
@@ -385,7 +386,7 @@ function setupEventListeners() {
   });
 
   document.getElementById("btn-results-insert").addEventListener("click", async () => {
-    const text = resultTextElement.textContent;
+    const text = resultTextElement.dataset.rawText || resultTextElement.innerText;
     if (currentHost === "Word") {
       const trackChanges = localStorage.getItem("mammouth_track_changes") === "true";
       await officeHelpers.insertTextWord(text, "after", trackChanges);
@@ -841,6 +842,7 @@ function updateAssistantText(text) {
 
   shimmer.classList.add("hidden");
   textDiv.innerHTML = formatMarkdown(text);
+  textDiv.dataset.rawText = text; // Stocker le texte brut avec les retours à la ligne
   actions.classList.remove("hidden");
 }
 

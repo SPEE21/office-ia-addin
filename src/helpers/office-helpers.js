@@ -160,7 +160,19 @@ class OfficeHelpers {
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // 2. Traiter ligne par ligne pour les listes et titres
+    // 2. Construire les styles inline à partir du fontBackup
+    let styleString = "";
+    if (fontBackup) {
+      if (fontBackup.name) styleString += `font-family: '${fontBackup.name}'; `;
+      if (fontBackup.size) styleString += `font-size: ${fontBackup.size}pt; `;
+      if (fontBackup.color) styleString += `color: ${fontBackup.color}; `;
+      if (fontBackup.bold === true) styleString += `font-weight: bold; `;
+      if (fontBackup.italic === true) styleString += `font-style: italic; `;
+      if (fontBackup.underline && fontBackup.underline !== "None") styleString += `text-decoration: underline; `;
+    }
+    const styleAttr = styleString ? ` style="${styleString}"` : "";
+
+    // 3. Traiter ligne par ligne pour les listes, titres et paragraphes
     const lines = escaped.split("\n");
     let inList = false;
     const processedLines = [];
@@ -171,28 +183,35 @@ class OfficeHelpers {
       // Titres (Heading 1, 2, 3)
       if (trimmed.startsWith("### ")) {
         if (inList) { processedLines.push("</ul>"); inList = false; }
-        processedLines.push(`<h3>${trimmed.substring(4)}</h3>`);
+        processedLines.push(`<h3${styleAttr}>${trimmed.substring(4)}</h3>`);
       } else if (trimmed.startsWith("## ")) {
         if (inList) { processedLines.push("</ul>"); inList = false; }
-        processedLines.push(`<h2>${trimmed.substring(3)}</h2>`);
+        processedLines.push(`<h2${styleAttr}>${trimmed.substring(3)}</h2>`);
       } else if (trimmed.startsWith("# ")) {
         if (inList) { processedLines.push("</ul>"); inList = false; }
-        processedLines.push(`<h1>${trimmed.substring(2)}</h1>`);
+        processedLines.push(`<h1${styleAttr}>${trimmed.substring(2)}</h1>`);
       }
       // Listes à puces
       else if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
         if (!inList) {
-          processedLines.push("<ul>");
+          processedLines.push(`<ul${styleAttr}>`);
           inList = true;
         }
         const itemText = trimmed.replace(/^[-*•]\s+/, "");
-        processedLines.push(`<li>${itemText}</li>`);
+        processedLines.push(`<li${styleAttr}>${itemText}</li>`);
       } else {
         if (inList) {
           processedLines.push("</ul>");
           inList = false;
         }
-        processedLines.push(line);
+        
+        // Si c'est une ligne vide, on ajoute un paragraphe vide,
+        // sinon un paragraphe classique.
+        if (trimmed === "") {
+          processedLines.push(`<p${styleAttr}>&nbsp;</p>`);
+        } else {
+          processedLines.push(`<p${styleAttr}>${line}</p>`);
+        }
       }
     }
     if (inList) {
@@ -201,41 +220,16 @@ class OfficeHelpers {
     
     let html = processedLines.join("\n");
 
-    // 3. Convertir le gras (**texte** ou __texte__)
+    // 4. Convertir le gras (**texte** ou __texte__)
     html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
     html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
 
-    // 4. Convertir l'italique (*texte* ou _texte_)
+    // 5. Convertir l'italique (*texte* ou _texte_)
     html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
     html = html.replace(/_(.*?)_/g, "<em>$1</em>");
 
-    // 5. Convertir le code en ligne (`code`)
+    // 6. Convertir le code en ligne (`code`)
     html = html.replace(/`(.*?)`/g, "<code>$1</code>");
-
-    // 6. Remplacer les retours à la ligne restants par des <br> pour Word
-    html = html.replace(/\n/g, "<br>");
-    
-    // Nettoyer les sauts de ligne superflus créés par le découpage de lignes autour des balises de bloc
-    html = html.replace(/<\/ul><br>/g, "</ul>");
-    html = html.replace(/<\/li><br>/g, "</li>");
-    html = html.replace(/<\/h1><br>/g, "</h1>");
-    html = html.replace(/<\/h2><br>/g, "</h2>");
-    html = html.replace(/<\/h3><br>/g, "</h3>");
-
-    // 7. Construire les styles inline à partir du fontBackup
-    let styleString = "";
-    if (fontBackup) {
-      if (fontBackup.name) styleString += `font-family: '${fontBackup.name}'; `;
-      if (fontBackup.size) styleString += `font-size: ${fontBackup.size}pt; `;
-      if (fontBackup.color) styleString += `color: ${fontBackup.color}; `;
-      if (fontBackup.bold === true) styleString += `font-weight: bold; `;
-      if (fontBackup.italic === true) styleString += `font-style: italic; `;
-      if (fontBackup.underline && fontBackup.underline !== "None") styleString += `text-decoration: underline; `;
-    }
-
-    if (styleString) {
-      html = `<span style="${styleString}">${html}</span>`;
-    }
 
     return html;
   }
